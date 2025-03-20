@@ -194,6 +194,13 @@ print(intersect(high_leverage, influential_points))
 
 ```
 
+## Output
+
+```{r}
+write.csv(x = df_coded,file = "Cleaned_data.csv")
+```
+
+
 No observation is both a high leverage point and a \*\*highly influential point. Since the leverage points and Cook's Distance tests collectively suggest retaining the previously identified outliers, they will be kept. Now, the data supports this assumption.
 
 The assumption that continuous independent variables have a linear relationship with the logit-transformed dependent variable will be further explored in later sections. This concludes the data preprocessing phase.
