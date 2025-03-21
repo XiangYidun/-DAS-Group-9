@@ -30,15 +30,19 @@ library(caret)
 ```
 
 # Introduction
+
 IMDB ratings significantly influence audience preferences and the film industry. This study aims to analyze which factors contribute to higher IMDB ratings, specifically whether a movie receives a score greater than 7. Using the IMDB film data set, we employ logistic regression to identify key predictors. The findings provide insights into which factors drive higher ratings by data processing, visualization and model evaluation.
 
 # Explanatory data analysis
+
 ```{r}
-df <- read.csv("C:/Users/2936935l/Downloads/dataset09.csv", stringsAsFactors = FALSE)
+df <- read.csv("../Data/dataset09.csv", stringsAsFactors = FALSE)
 ```
 
 ## Data cleaning
+
 Before data modelling, we first check whether there are abnormal or missing values.
+
 ```{r}
 str<-str(df)
 summary<-summary(df)
@@ -47,6 +51,7 @@ summary<-summary(df)
 At this stage, we can clearly observe that the **length** variable contains some missing values. No other obvious anomalies are present in the data set. However, further discussion and analysis are needed.
 
 ## Distribution of IMDB rating
+
 ```{r}
 ggplot(df, aes(x=rating))+
   geom_histogram(binwidth=0.5,fill="blue",alpha=0.6)+
@@ -57,6 +62,7 @@ ggplot(df, aes(x=rating))+
 Most of the IMDB scores are concentrated in 4-8 points, with a slightly right distribution. The dependent variable must be categorical, with at least one independent variable. Independent variables can be either continuous or categorical. We can see that the target response variable should be whether films are rated by IMDb as greater than 7 or not. Therefore, the response variable needs to be transformed.
 
 ## key indicators influencing rating
+
 ```{r}
 # Rating vs Budget
 p1<-ggplot(df,aes(x=budget,y=rating))+
@@ -84,7 +90,7 @@ From the plots, we can see that movies with higher budges tend to have higher ra
 ggpairs(df,c("length", "budget", "votes","rating"))
 ```
 
-From the correlation plots, we can see that the negative correlation of length and rating is the most obvious, indicating that long movies tend to have lower scores. In addition, the correlation between all variables is relatively weak, which means they can be used as independent variables in the logical regression model. 
+From the correlation plots, we can see that the negative correlation of length and rating is the most obvious, indicating that long movies tend to have lower scores. In addition, the correlation between all variables is relatively weak, which means they can be used as independent variables in the logical regression model.
 
 ## Handle missing values
 
@@ -356,13 +362,8 @@ metrics <- confusionMatrix(as.factor(pred_class), df$high_rating)
 print(metrics)
 ```
 
-From the confusion matrix, we can see that the accuracy score is 0.8946, indicating that the model perform well in classification. What's more, the sensitivity score is 0.9282, indicating that the model perform well in the movies with high rating. 
+From the confusion matrix, we can see that the accuracy score is 0.8946, indicating that the model perform well in classification. What's more, the sensitivity score is 0.9282, indicating that the model perform well in the movies with high rating.
 
 # Conclusion
 
-In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity). Residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights 
-can help filmmakers produce movies and better marketing.
-
-
-
-
+In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity). Residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing.
