@@ -15,6 +15,7 @@ library(fastDummies)
 library(lmtest)
 library(car)
 library(pROC)
+library(brglm2)
 ```
 
 # Data Cleaning
@@ -204,12 +205,25 @@ options(scipen = 999)
 model <- glm(
   high_rating ~ years_since + length + budget + votes + genre,
   family = binomial(link = 'logit'),
-  data = df
+  data = df,method = "brglmFit"
 )
 
 # 输出模型摘要
 summary(model)
 ```
+
+It is observed that in some cases the model produces predicted probabilities of exactly 0 or 1. This may be due to variables such as budget or votes having a very large range of values, which affects numerical computations and causes issues like quasi-complete separation in logistic regression.
+
+```{r}
+#Check which samples have predicted probabilities exactly equal to 0 or 1
+pred_probs <- predict(model, type = "response")
+summary(pred_probs)
+#Find and display the samples
+df_extreme <- df[pred_probs %in% c(0, 1), ]
+print(df_extreme)
+```
+
+However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 — they are merely close to 0 or 1. Therefore, no adjustment is necessary.
 
 ## **Likelihood Ratio Test**
 
