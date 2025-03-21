@@ -1,6 +1,6 @@
 ---
 title: "Data-Cleaning"
-author: "Diwen Jiang"
+author: "Diwen Jiang, Wei Xiang"
 format: pdf
 editor: visual
 number-sections: true
@@ -14,6 +14,7 @@ library(dplyr)
 library(fastDummies)
 library(lmtest)
 library(car)
+library(pROC)
 ```
 
 # Data Cleaning
@@ -65,16 +66,20 @@ We can see that the target response variable should be whether films are rated b
 df$high_rating <- ifelse(df$rating > 7, 1, 0)
 ```
 
-Additionally, the "genre" variable is a multinomial categorical variable, so it needs to be converted into dummy variables.
+Additionally, the "genre" variable is a multinomial categorical variable, so it needs to be converted into to a factor type.
 
 ```{r}
-df_coded <- dummy_cols(df, select_columns = "genre",
-                         remove_first_dummy = FALSE,
-                         remove_selected_columns = TRUE)
-print(df_coded)
+df$genre <- factor(df$genre)
+df$high_rating <- factor(df$high_rating)
 ```
 
 Now, all variables meet the requirements of this assumption.
+
+#### Convert the year column to year_since
+
+```{r}
+df$years_since <- 2025 - df$year
+```
 
 ### Each observation must be independent. The categories of categorical variables (including both the dependent and independent variables) must be exhaustive and mutually exclusive.
 
@@ -85,37 +90,22 @@ The "year" variable may introduce dependency in the data, so we use the Durbin-W
 ```{r}
 
 # Set up linear regression model 1
-model_1 <- glm(high_rating ~ year + length + budget 
-             + votes + genre_Action + genre_Animation + genre_Short 
-             + genre_Documentary + genre_Romance + genre_Comedy + genre_Drama, 
-             data = df_coded, family = binomial)
+model_1 <- glm(high_rating ~ year + length + budget + votes + genre ,data = df, family = binomial)
 
 # Durbin-Watson checking
 dwtest(model_1)
 
 ```
 
-p-value is equal to 0.6249, which is far greater than 0.05, indicating that the independence assumption is satisfied.
+p-value is equal to 0.9514, which is far greater than 0.05, indicating that the independence assumption is satisfied.
 
 Check for duplicate values and abnormal patterns:
 
 ```{r}
-sum(duplicated(df_coded))
+sum(duplicated(df))
 ```
 
-There are no duplicate values in the dataset.
-
-#### Check whether categorical variables are mutually exclusive.
-
-```{r}
-# Check whether any films belong to multiple genres simultaneously.
-sum(rowSums(df_coded[, c("genre_Action" , "genre_Animation" , "genre_Short" 
-             , "genre_Documentary" , "genre_Romance" , 
-             "genre_Comedy" , "genre_Drama")]) > 1)
-
-```
-
-This result Indicates that no films are classified into multiple genres simultaneously.
+There are no duplicate values in the dataset.This result Indicates that no films are classified into multiple genres simultaneously.
 
 ### The minimum sample size requirement
 
@@ -130,9 +120,8 @@ VIF calculates the correlation between an independent variable and other indepen
 ```{r}
 # Set up linear regression model 2
 model_2 <- glm(high_rating ~ year + length + budget 
-             + votes + genre_Action + genre_Animation + genre_Short 
-             + genre_Documentary + genre_Romance + genre_Comedy, 
-             data = df_coded, family = binomial)
+             + votes + genre, 
+             data = df, family = binomial)
 
 # Calculate VIF
 vif(model_2)
@@ -154,10 +143,10 @@ outliers <- which(abs(model_residuals) > 3)
 print(outliers)
 ```
 
-We found that rows 917, 1870, and 2388 may contain outliers.Now, print these three rows for inspection.
+We found that rows 917, 1870, and 2388 may contain outliers .Now, print these three rows for inspection.
 
 ```{r}
-print(df_coded[outliers, ])
+print(df[outliers, ])
 ```
 
 After inspection, these three values are considered normal data and will be retained for now.
@@ -169,7 +158,7 @@ Check for leverage points:
 leverage <- hatvalues(model_1)
 
 # Calculate the leverage threshold
-threshold <- 2 * (length(coef(model_1)) / nrow(df_coded))
+threshold <- 2 * (length(coef(model_1)) / nrow(df))
 
 # Identify points with high leverage
 high_leverage <- which(leverage > threshold)
@@ -181,7 +170,7 @@ print(high_leverage)
 A large number of leverage values have been detected, requiring further investigation.
 
 ```{r}
-print(df_coded[high_leverage, c("year", "length", "budget", "votes", "high_rating")])
+print(df[high_leverage, c("year", "length", "budget", "votes", "high_rating")])
 ```
 
 Combine Cook's Distance to check which points are truly influential.
@@ -197,10 +186,115 @@ print(intersect(high_leverage, influential_points))
 ## Output
 
 ```{r}
-write.csv(x = df_coded,file = "Cleaned_data.csv")
+write.csv(x = df,file = "Cleaned_data.csv",row.names = FALSE)
 ```
-
 
 No observation is both a high leverage point and a \*\*highly influential point. Since the leverage points and Cook's Distance tests collectively suggest retaining the previously identified outliers, they will be kept. Now, the data supports this assumption.
 
 The assumption that continuous independent variables have a linear relationship with the logit-transformed dependent variable will be further explored in later sections. This concludes the data preprocessing phase.
+
+## fitting model
+
+```{r}
+#| echo: false
+
+options(scipen = 999)
+
+# 建立二项分布广义线性模型
+model <- glm(
+  high_rating ~ years_since + length + budget + votes + genre,
+  family = binomial(link = 'logit'),
+  data = df
+)
+
+# 输出模型摘要
+summary(model)
+```
+
+## **Likelihood Ratio Test**
+
+```{r}
+# 构建基准模型和完整模型
+null_model <- glm(high_rating ~ 1, family = binomial(), data = df)
+
+
+# 执行似然比检验
+anova_result <- anova(null_model, model, test = "Chisq")
+print(anova_result)
+```
+
+**p \< 0.05**，说明完整模型显著优于基准模型。
+
+## **Wald Test**
+
+```{r}
+
+# Wald卡方检验（Type III检验）
+wald_test <- Anova(model, type = "III", test = "Wald")
+print(wald_test)
+```
+
+**p \< 0.05**所有变量都显著
+
+## **Hosmer-Lemeshow test**
+
+```{r}
+library(ResourceSelection)
+df$predicted_prob <- predict(model, type = "response")
+
+# 进行 Hosmer-Lemeshow 检验（分10组）
+hl_test <- hoslem.test(as.numeric(df$high_rating), df$predicted_prob, g = 10)
+
+# 输出检验结果
+print(hl_test)
+```
+
+**p \> 0.05**，说明模型拟合良好
+
+## residual analysis
+
+```{r}
+library(ggplot2)
+deviance_resid <- residuals(model, type = "deviance")
+# 使用 ggplot2 绘制残差图
+ggplot(df, aes(x = predicted_prob, y = deviance_resid)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Residual Plot", x = "Predicted Probability", y = "Deviance Residuals") +
+  theme_minimal()
+```
+
+```{r}
+# 1. 设置图形布局（1行2列）
+par(mfrow = c(1, 2))  # 一行两列，显示两张图
+
+# 2. 绘制残差vs拟合值图
+plot(model, which = 1, main = "Residuals vs Fitted")
+
+# 3. 绘制QQ图
+plot(model, which = 2, main = "Q-Q Plot")
+```
+
+## ROC curve and AUC value
+
+```{r}
+
+# 预测概率
+pred_prob <- predict(model, type = "response")
+
+# 计算ROC曲线
+roc_curve <- roc(response = df$high_rating, predictor = pred_prob)
+plot(roc_curve)
+auc_value <- auc(roc_curve)
+cat("AUC =", auc_value, "\n")
+```
+
+```{r}
+# 生成预测类别
+pred_class <- ifelse(pred_prob > 0.5, 1, 0)
+
+# 计算准确率、召回率等
+library(caret)
+metrics <- confusionMatrix(as.factor(pred_class), df$high_rating)
+print(metrics)
+```
