@@ -12,6 +12,7 @@ execute:
   eval: true
   warning: false
   message: false
+  results: 'asis'
 ---
 
 ```{r}
@@ -33,22 +34,13 @@ library(caret)
 
 IMDB ratings significantly influence audience preferences and the film industry. This study aims to analyze which factors contribute to higher IMDB ratings, specifically whether a movie receives a score greater than 7. Using the IMDB film data set, we employ logistic regression to identify key predictors. The findings provide insights into which factors drive higher ratings by data processing, visualization and model evaluation.
 
-# Explanatory data analysis
+# Import Data
 
 ```{r}
 df <- read.csv("../Data/dataset09.csv", stringsAsFactors = FALSE)
 ```
 
-## Data cleaning
-
-Before data modelling, we first check whether there are abnormal or missing values.
-
-```{r}
-str<-str(df)
-summary<-summary(df)
-```
-
-At this stage, we can clearly observe that the **length** variable contains some missing values. No other obvious anomalies are present in the data set. However, further discussion and analysis are needed.
+# Explanatory data analysis
 
 ## Distribution of IMDB rating
 
@@ -92,7 +84,18 @@ ggpairs(df,c("length", "budget", "votes","rating"))
 
 From the correlation plots, we can see that the negative correlation of length and rating is the most obvious, indicating that long movies tend to have lower scores. In addition, the correlation between all variables is relatively weak, which means they can be used as independent variables in the logical regression model.
 
-## Handle missing values
+# Data cleaning
+
+Before data modelling, we first check whether there are abnormal or missing values.
+
+```{r}
+str<-str(df)
+summary<-summary(df)
+```
+
+At this stage, we can clearly observe that the **length** variable contains some missing values. No other obvious anomalies are present in the data set. However, further discussion and analysis are needed.
+
+## Check for assumption 1 and handle missing values
 
 Therefore, we should handle the missing values.The first step is to check whether the missing values are Missing Completely at Random (MCAR).
 
@@ -105,6 +108,10 @@ p value is equal to 1 (far greater than 0.05), meaning there is no systematic mi
 ```{r}
 df <- df %>% filter(!is.na(length))
 ```
+
+## Check for assumption 2
+
+The dependent variable must be categorical, with at least one independent variable. Independent variables can be either continuous or categorical.
 
 ```{r}
 # convert y
@@ -120,7 +127,7 @@ df$high_rating <- factor(df$high_rating)
 
 Now, all variables meet the requirements of this assumption.
 
-## Convert the year column to year_since
+### Convert the year column to year_since
 
 ```{r}
 df$years_since <- 2025 - df$year
@@ -128,7 +135,9 @@ df$years_since <- 2025 - df$year
 
 Each observation must be independent. The categories of categorical variables (including both the dependent and independent variables) must be exhaustive and mutually exclusive.
 
-## Check whether the observations are inpendent
+## Check for assumption 3
+
+Check whether the observations are independent.
 
 The "year" variable may introduce dependency in the data, so we use the Durbin-Watson test to check for autocorrelation:
 
@@ -150,7 +159,11 @@ dup<-sum(duplicated(df))
 
 There are no duplicate values in the dataset.This result Indicates that no films are classified into multiple genres simultaneously.
 
-The cleaned dataset contains 2,874 entries, which clearly supports this assumption.
+## Check for assumption 4
+
+Logistic regression requires the assumption that: The minimum sample size should be 15 times the number of independent variables.The cleaned dataset contains 2,874 entries, which clearly supports this assumption.
+
+## Check for assumption 5
 
 There should be no multicollinearity among independent variables.
 
@@ -167,6 +180,8 @@ vif(model_2)
 ```
 
 All VIF less than 5, indicating that there is no severe multicollinearity.
+
+## Check for assumption 6
 
 There should be no significant outliers, leverage points, or influential points in the data.
 
@@ -235,7 +250,7 @@ The assumption that continuous independent variables have a linear relationship 
 
 ```{r}
 #| echo: false
-
+#| results: markup
 options(scipen = 999)
 
 # construct a GLM based on the binomial distribution
@@ -265,6 +280,7 @@ However, "df_extreme" is empty, indicating that there are no samples with predic
 ## **Likelihood Ratio Test**
 
 ```{r}
+#| results: markup
 # establish models
 null_model <- glm(high_rating ~ 1, family = binomial(), data = df)
 
@@ -279,7 +295,7 @@ print(anova_result)
 ## **Wald Test**
 
 ```{r}
-
+#| results: markup
 # Wald test（Type III test）
 wald_test <- Anova(model, type = "III", test = "Wald")
 print(wald_test)
@@ -290,6 +306,7 @@ print(wald_test)
 ## **Hosmer-Lemeshow test**
 
 ```{r}
+#| results: markup
 df$predicted_prob <- predict(model, type = "response")
 
 # Hosmer-Lemeshow test
@@ -366,4 +383,6 @@ From the confusion matrix, we can see that the accuracy score is 0.8946, indicat
 
 # Conclusion
 
-In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity). Residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing.
+In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity).
+
+#Future Work In this analysis, we found that the ROC curve demonstrated a good model fit. However, the residual plot and QQ plot revealed some issues. During the model diagnostics, we also observed predicted probabilities that were very close to 0 and 1. We suspect that this may be due to the presence of certain categorical predictors with sparse categories, which could be affecting the model's stability. Also residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing. Furthermore, applying machine learning techniques—such as using a Random Forest to handle this binary classification problem—may yield better performance and more robust results.
