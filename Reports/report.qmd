@@ -254,6 +254,10 @@ ggpairs(df,c("length", "budget", "votes","rating"))
 
 From the correlation plots, we can see that the negative correlation of length and rating is the most obvious, indicating that long movies tend to have lower scores. In addition, the correlation between all variables is relatively weak, which means they can be used as independent variables in the logical regression model.
 
+```{=latex}
+\newpage
+```
+
 # Formal analysis
 
 ## fitting model
