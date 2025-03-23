@@ -287,7 +287,7 @@ df_extreme <- df[pred_probs %in% c(0, 1), ]
 print(df_extreme)
 ```
 
-However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 â€? they are merely close to 0 or 1. Therefore, no adjustment is necessary.
+However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 ??? they are merely close to 0 or 1. Therefore, no adjustment is necessary.
 
 ## **Likelihood Ratio Test**
 
@@ -308,7 +308,7 @@ print(anova_result)
 
 ```{r}
 #| results: markup
-# Wald testï¼ˆType III testï¼?
+# Wald testï¼ˆType III test???
 wald_test <- Anova(model, type = "III", test = "Wald")
 print(wald_test)
 ```
@@ -340,39 +340,22 @@ print(hl_test)
 # residuals vs fitted
 df_residuals<-data.frame(
   Fitted=fitted(model),
-  Residuals=residuals(model)
+  Residuals=residuals(model,type = "response")
 )
 ggplot(df_residuals,aes(x=Fitted,y=Residuals))+
   geom_point(color="blue",alpha=0.6)+
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   labs(x="Fitted Values",y="Residuals")
+
+ggplot(df_residuals,aes(x=df$film_id,y=Residuals))+
+  geom_point(color="blue",alpha=0.6)+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(x="film_id",y="Residuals")
 ```
 
-From the Residuals vs Fitted plot, we can see that the model may have sysmetric errors, and the fitting effect is not good at extreme values (close to 0 or 1).
+The first plot shows the typical residual pattern of logistic regression, indicating that standard residual analysis methods are not suitable. Instead, it is better to evaluate the model using AUC, confusion matrix, or other appropriate metrics.
 
-```{r}
-#| label: fig-QQ
-#| fig.cap: "Normal QQ plot"
-#| fig-align: center
-# Q-Q plot
-qq_data<-data.frame(
-  sample=residuals(model),
-  theoretical=qqnorm(residuals(model))
-)
-```
-
-```{r}
-#| label: fig-residuals
-#| fig.cap: "Q-Q Plot of Residuals"
-#| fig-align: center
-ggplot(qq_data,aes(sample=sample))+
-  stat_qq()+
-  stat_qq_line(color="red")+
-  labs(x="Theoretical Quantiles",
-       y="Sample Quantiles")
-```
-
-From the Q-Q plot, we can see that the distribution of residual deviate from the normal distribution, and there is a heavy tail distribution.
+The second plot suggests that the residuals are randomly distributed without clear trends or autocorrelation, indicating that the model is likely reasonable overall.
 
 ## ROC curve and AUC value
 
@@ -409,6 +392,6 @@ From the confusion matrix, we can see that the accuracy score is 0.8946, indicat
 
 In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity).
 
-# Future Work 
+# Future Work
 
 In this analysis, we found that the ROC curve demonstrated a good model fit. However, the residual plot and QQ plot revealed some issues. During the model diagnostics, we also observed predicted probabilities that were very close to 0 and 1. We suspect that this may be due to the presence of certain categorical predictors with sparse categories, which could be affecting the model's stability. Also residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing. Furthermore, applying machine learning techniques such as using a Random Forest to handle this binary classification problem may yield better performance and more robust results.
