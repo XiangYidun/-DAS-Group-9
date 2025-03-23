@@ -239,11 +239,12 @@ p3<-df %>%
   summarise(avg_rating=mean(rating,na.rm=TRUE))%>%
   ggplot(aes(x=reorder(genre,avg_rating),y=avg_rating,fill=genre))+
   geom_bar(stat="identity",show.legend = FALSE)+
-  labs(title="Average Rating by Genre",x="Genre",y="Average Rating")
+  labs(title="Avg Rating by Genre",x="Genre",y="Average Rating")+
+  theme(axis.text.x=element_text(angle=45,hjust=1))
 grid.arrange(p1,p2,p3,nrow=1)
 ```
 
-From the plots, we can see that movies with higher budges tend to have higher ratings, but the relevance is not obvious; There is a positive relationship trend in the score and the number of votes, indicating that the ratings of movies with more votes are usually higher; There are significant differences in the average scores of different film types, and some genres (documentaries and drama films) have higher scores.
+From the plots, we can see that movies with higher budges tend to have higher ratings, but the relevance is not obvious; There is a slight negative relationship trend in the score and the number of votes, but the intensity is very weak; There are significant differences in the average scores of different film types, and some genres (documentaries and drama films) have higher scores.
 
 ```{r}
 #| label: fig-relationships
