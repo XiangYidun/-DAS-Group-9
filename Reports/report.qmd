@@ -1,21 +1,26 @@
 ---
 title: "Analyzing Properties Influencing IMDB Ratings based on a Logistic Regression"
 author: "Diwen Jiang, Wei Xiang, Zilu Liu"
-format:
-  pdf:
-    fontsize: 12pt
 number-sections: true
+format:
+  pdf: default
 editor_options: 
   chunk_output_type: console
 execute:
-  echo: false
+  echo: true
   eval: true
   warning: false
   message: false
   results: asis
 ---
 
+# Introduction
+
+IMDB ratings significantly influence audience preferences and the film industry. This study aims to analyze which factors contribute to higher IMDB ratings, specifically whether a movie receives a score greater than 7. Using the IMDB film data set, we employ logistic regression to identify key predictors. The findings provide insights into which factors drive higher ratings by data processing, visualization and model evaluation.
+
 ```{r}
+#| label: libraries
+#Load the required R packages
 library(naniar)
 library(dplyr)
 library(fastDummies)
@@ -33,70 +38,19 @@ library(knitr)
 library(kableExtra)
 ```
 
-# Introduction
-
-IMDB ratings significantly influence audience preferences and the film industry. This study aims to analyze which factors contribute to higher IMDB ratings, specifically whether a movie receives a score greater than 7. Using the IMDB film data set, we employ logistic regression to identify key predictors. The findings provide insights into which factors drive higher ratings by data processing, visualization and model evaluation.
-
-# Import Data
-
-```{r}
-df <- read.csv("../Data/dataset09.csv", stringsAsFactors = FALSE)
-```
-
-# Explanatory data analysis
-
-## Distribution of IMDB rating
-
-```{r}
-ggplot(df, aes(x=rating))+
-  geom_histogram(binwidth=0.5,fill="blue",alpha=0.6)+
-  labs(title="Distribution of IMDB Rating")+
-  theme_minimal()
-```
-
-Most of the IMDB scores are concentrated in 4-8 points, with a slightly right distribution. The dependent variable must be categorical, with at least one independent variable. Independent variables can be either continuous or categorical. We can see that the target response variable should be whether films are rated by IMDb as greater than 7 or not. Therefore, the response variable needs to be transformed.
-
-## key indicators influencing rating
-
-```{r}
-# Rating vs Budget
-p1<-ggplot(df,aes(x=budget,y=rating))+
-  geom_point(alpha=0.5,color="blue")+
-  geom_smooth(method="lm",color="red")+
-  labs(title="Rating vs Budget",x="Budget",y="IMDB Rating")
-# Rating vs Votes
-p2<-ggplot(df,aes(x=votes,y=rating))+
-  geom_point(alpha=0.5,color="purple")+
-  geom_smooth(method="lm",color="red")+
-  labs(title="Rating vs Votes",x="Votes",y="IMDB Rating")
-# Rating by Genre
-p3<-df %>% 
-  group_by(genre)%>%
-  summarise(avg_rating=mean(rating,na.rm=TRUE))%>%
-  ggplot(aes(x=reorder(genre,avg_rating),y=avg_rating,fill=genre))+
-  geom_bar(stat="identity",show.legend = FALSE)+
-  labs(title="Average Rating by Genre",x="Genre",y="Average Rating")
-grid.arrange(p1,p2,p3,nrow=1)
-```
-
-From the plots, we can see that movies with higher budges tend to have higher ratings, but the relevance is not obvious; There is a positive relationship trend in the score and the number of votes, indicating that the ratings of movies with more votes are usually higher; There are significant differences in the average scores of different film types, and some genres (documentaries and drama films) have higher scores.
-
-```{r}
-ggpairs(df,c("length", "budget", "votes","rating"))
-```
-
-From the correlation plots, we can see that the negative correlation of length and rating is the most obvious, indicating that long movies tend to have lower scores. In addition, the correlation between all variables is relatively weak, which means they can be used as independent variables in the logical regression model.
-
 # Data cleaning
 
 Before data modelling, we first check whether there are abnormal or missing values.
 
 ```{r}
+#read the data
+df <- read.csv("../Data/dataset09.csv", stringsAsFactors = FALSE)
 str<-str(df)
 summary<-summary(df)
+print(summary)
 ```
 
-At this stage, we can clearly observe that the **length** variable contains some missing values. No other obvious anomalies are present in the data set. However, further discussion and analysis are needed.
+At this stage, we can clearly observe that the **length** variable contains 127 missing values. No other obvious anomalies are present in the data set. However, further discussion and analysis are needed.
 
 ## Check for assumption 1 and handle missing values
 
@@ -147,7 +101,9 @@ The "year" variable may introduce dependency in the data, so we use the Durbin-W
 ```{r}
 
 # Set up linear regression model 1
-model_1 <- glm(high_rating ~ year + length + budget + votes + genre ,data = df, family = binomial)
+model_1 <- glm(high_rating ~ year + length + budget + votes + genre ,
+               data = df, 
+               family = binomial)
 
 # Durbin-Watson checking
 dwtest(model_1)
@@ -247,6 +203,56 @@ No observation is both a high leverage point and a \*\*highly influential point.
 
 The assumption that continuous independent variables have a linear relationship with the logit-transformed dependent variable will be further explored in later sections. This concludes the data preprocessing phase.
 
+# Explanatory data analysis
+
+## Distribution of IMDB rating
+
+```{r}
+#| echo: true
+#| fig.cap: "Distribution of IMDB Rating"
+#| fig-align: center
+ggplot(df, aes(x=rating))+
+  geom_histogram(binwidth=0.5,fill="blue",alpha=0.6)+
+  theme_minimal()
+```
+
+Most of the IMDB scores are concentrated in 4-8 points, with a slightly right distribution. The dependent variable must be categorical, with at least one independent variable. Independent variables can be either continuous or categorical. We can see that the target response variable should be whether films are rated by IMDb as greater than 7 or not. Therefore, the response variable needs to be transformed.
+
+## key indicators influencing rating
+
+```{r}
+#| label: fig-indicators
+#| fig-cap: "key indicators influencing rating"
+# Rating vs Budget
+p1<-ggplot(df,aes(x=budget,y=rating))+
+  geom_point(alpha=0.5,color="blue")+
+  geom_smooth(method="lm",color="red")+
+  labs(title="Rating vs Budget",x="Budget",y="IMDB Rating")
+# Rating vs Votes
+p2<-ggplot(df,aes(x=votes,y=rating))+
+  geom_point(alpha=0.5,color="purple")+
+  geom_smooth(method="lm",color="red")+
+  labs(title="Rating vs Votes",x="Votes",y="IMDB Rating")
+# Rating by Genre
+p3<-df %>% 
+  group_by(genre)%>%
+  summarise(avg_rating=mean(rating,na.rm=TRUE))%>%
+  ggplot(aes(x=reorder(genre,avg_rating),y=avg_rating,fill=genre))+
+  geom_bar(stat="identity",show.legend = FALSE)+
+  labs(title="Average Rating by Genre",x="Genre",y="Average Rating")
+grid.arrange(p1,p2,p3,nrow=1)
+```
+
+From the plots, we can see that movies with higher budges tend to have higher ratings, but the relevance is not obvious; There is a positive relationship trend in the score and the number of votes, indicating that the ratings of movies with more votes are usually higher; There are significant differences in the average scores of different film types, and some genres (documentaries and drama films) have higher scores.
+
+```{r}
+#| label: fig-relationships
+#| fig-cap: "Relationships Between Movie Length, Budget, Votes, and Rating"
+ggpairs(df,c("length", "budget", "votes","rating"))
+```
+
+From the correlation plots, we can see that the negative correlation of length and rating is the most obvious, indicating that long movies tend to have lower scores. In addition, the correlation between all variables is relatively weak, which means they can be used as independent variables in the logical regression model.
+
 # Formal analysis
 
 ## fitting model
@@ -281,7 +287,7 @@ df_extreme <- df[pred_probs %in% c(0, 1), ]
 print(df_extreme)
 ```
 
-However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 — they are merely close to 0 or 1. Therefore, no adjustment is necessary.
+However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 �? they are merely close to 0 or 1. Therefore, no adjustment is necessary.
 
 ## **Likelihood Ratio Test**
 
@@ -302,7 +308,7 @@ print(anova_result)
 
 ```{r}
 #| results: markup
-# Wald test（Type III test）
+# Wald test（Type III test�?
 wald_test <- Anova(model, type = "III", test = "Wald")
 print(wald_test)
 ```
@@ -327,6 +333,10 @@ print(hl_test)
 ## residual analysis
 
 ```{r}
+#| echo: true
+#| label: fig-residual
+#| fig.cap: "Residuals vs Fitted"
+#| fig-align: center
 # residuals vs fitted
 df_residuals<-data.frame(
   Fitted=fitted(model),
@@ -335,24 +345,30 @@ df_residuals<-data.frame(
 ggplot(df_residuals,aes(x=Fitted,y=Residuals))+
   geom_point(color="blue",alpha=0.6)+
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(title="Residuals vs Fitted",
-       x="Fitted Values",
-       y="Residuals")
+  labs(x="Fitted Values",y="Residuals")
 ```
 
 From the Residuals vs Fitted plot, we can see that the model may have sysmetric errors, and the fitting effect is not good at extreme values (close to 0 or 1).
 
 ```{r}
+#| label: fig-QQ
+#| fig.cap: "Normal QQ plot"
+#| fig-align: center
 # Q-Q plot
 qq_data<-data.frame(
   sample=residuals(model),
   theoretical=qqnorm(residuals(model))
 )
+```
+
+```{r}
+#| label: fig-residuals
+#| fig.cap: "Q-Q Plot of Residuals"
+#| fig-align: center
 ggplot(qq_data,aes(sample=sample))+
   stat_qq()+
   stat_qq_line(color="red")+
-  labs(title="Q-Q Plot of Residuals",
-       x="Theoretical Quantiles",
+  labs(x="Theoretical Quantiles",
        y="Sample Quantiles")
 ```
 
@@ -361,7 +377,9 @@ From the Q-Q plot, we can see that the distribution of residual deviate from the
 ## ROC curve and AUC value
 
 ```{r}
-
+#| label: fig-ROC
+#| fig.cap: "ROC Curve"
+#| fig-align: center
 # prediction probability
 pred_prob <- predict(model, type = "response")
 
@@ -369,7 +387,7 @@ pred_prob <- predict(model, type = "response")
 roc_curve <- roc(response = df$high_rating, predictor = pred_prob)
 par(mfrow=c(1,1))
 par(pty="s")
-plot(roc_curve,main="ROC Curve", col="blue",lwd=2)
+plot(roc_curve, col="blue",lwd=2)
 auc_value <- auc(roc_curve)
 cat("AUC =", auc_value, "\n")
 ```
@@ -391,4 +409,6 @@ From the confusion matrix, we can see that the accuracy score is 0.8946, indicat
 
 In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity).
 
-#Future Work In this analysis, we found that the ROC curve demonstrated a good model fit. However, the residual plot and QQ plot revealed some issues. During the model diagnostics, we also observed predicted probabilities that were very close to 0 and 1. We suspect that this may be due to the presence of certain categorical predictors with sparse categories, which could be affecting the model's stability. Also residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing. Furthermore, applying machine learning techniques—such as using a Random Forest to handle this binary classification problem—may yield better performance and more robust results.
+# Future Work 
+
+In this analysis, we found that the ROC curve demonstrated a good model fit. However, the residual plot and QQ plot revealed some issues. During the model diagnostics, we also observed predicted probabilities that were very close to 0 and 1. We suspect that this may be due to the presence of certain categorical predictors with sparse categories, which could be affecting the model's stability. Also residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing. Furthermore, applying machine learning techniques such as using a Random Forest to handle this binary classification problem may yield better performance and more robust results.
