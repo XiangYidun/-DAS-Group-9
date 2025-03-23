@@ -11,7 +11,7 @@ execute:
   eval: true
   warning: false
   message: false
-  results: 'asis'
+  results: asis
 ---
 
 # Introduction
@@ -33,6 +33,9 @@ library(GGally)
 library(gridExtra)
 library(ResourceSelection)
 library(caret)
+library(broom)
+library(knitr)
+library(kableExtra)
 ```
 
 # Data cleaning
@@ -236,11 +239,12 @@ p3<-df %>%
   summarise(avg_rating=mean(rating,na.rm=TRUE))%>%
   ggplot(aes(x=reorder(genre,avg_rating),y=avg_rating,fill=genre))+
   geom_bar(stat="identity",show.legend = FALSE)+
-  labs(title="Average Rating by Genre",x="Genre",y="Average Rating")
+  labs(title="Avg Rating by Genre",x="Genre",y="Average Rating")+
+  theme(axis.text.x=element_text(angle=45,hjust=1))
 grid.arrange(p1,p2,p3,nrow=1)
 ```
 
-From the plots, we can see that movies with higher budges tend to have higher ratings, but the relevance is not obvious; There is a positive relationship trend in the score and the number of votes, indicating that the ratings of movies with more votes are usually higher; There are significant differences in the average scores of different film types, and some genres (documentaries and drama films) have higher scores.
+From the plots, we can see that movies with higher budges tend to have higher ratings, but the relevance is not obvious; There is a slight negative relationship trend in the score and the number of votes, but the intensity is very weak; There are significant differences in the average scores of different film types, and some genres (documentaries and drama films) have higher scores.
 
 ```{r}
 #| label: fig-relationships
@@ -267,7 +271,10 @@ model <- glm(
 )
 
 # summary of the model
-summary(model)
+tidy_model <- tidy(model)
+
+kable(tidy_model, digits = 3, caption = "Regression Model Coefficients") %>%
+  kable_styling(latex_options = c("hold_position", "striped"))
 ```
 
 It is observed that in some cases the model produces predicted probabilities of exactly 0 or 1. This may be due to variables such as budget or votes having a very large range of values, which affects numerical computations and causes issues like quasi-complete separation in logistic regression.
@@ -281,7 +288,7 @@ df_extreme <- df[pred_probs %in% c(0, 1), ]
 print(df_extreme)
 ```
 
-However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 â€? they are merely close to 0 or 1. Therefore, no adjustment is necessary.
+However, "df_extreme" is empty, indicating that there are no samples with predicted probabilities exactly equal to 0 or 1 ??? they are merely close to 0 or 1. Therefore, no adjustment is necessary.
 
 ## **Likelihood Ratio Test**
 
@@ -302,7 +309,7 @@ print(anova_result)
 
 ```{r}
 #| results: markup
-# Wald testï¼ˆType III testï¼?
+# Wald testï¼ˆType III test???
 wald_test <- Anova(model, type = "III", test = "Wald")
 print(wald_test)
 ```
@@ -334,39 +341,22 @@ print(hl_test)
 # residuals vs fitted
 df_residuals<-data.frame(
   Fitted=fitted(model),
-  Residuals=residuals(model)
+  Residuals=residuals(model,type = "response")
 )
 ggplot(df_residuals,aes(x=Fitted,y=Residuals))+
   geom_point(color="blue",alpha=0.6)+
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   labs(x="Fitted Values",y="Residuals")
+
+ggplot(df_residuals,aes(x=df$film_id,y=Residuals))+
+  geom_point(color="blue",alpha=0.6)+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(x="film_id",y="Residuals")
 ```
 
-From the Residuals vs Fitted plot, we can see that the model may have sysmetric errors, and the fitting effect is not good at extreme values (close to 0 or 1).
+The first plot shows the typical residual pattern of logistic regression, indicating that standard residual analysis methods are not suitable. Instead, it is better to evaluate the model using AUC, confusion matrix, or other appropriate metrics.
 
-```{r}
-#| label: fig-QQ
-#| fig.cap: "Normal QQ plot"
-#| fig-align: center
-# Q-Q plot
-qq_data<-data.frame(
-  sample=residuals(model),
-  theoretical=qqnorm(residuals(model))
-)
-```
-
-```{r}
-#| label: fig-residuals
-#| fig.cap: "Q-Q Plot of Residuals"
-#| fig-align: center
-ggplot(qq_data,aes(sample=sample))+
-  stat_qq()+
-  stat_qq_line(color="red")+
-  labs(x="Theoretical Quantiles",
-       y="Sample Quantiles")
-```
-
-From the Q-Q plot, we can see that the distribution of residual deviate from the normal distribution, and there is a heavy tail distribution.
+The second plot suggests that the residuals are randomly distributed without clear trends or autocorrelation, indicating that the model is likely reasonable overall.
 
 ## ROC curve and AUC value
 
