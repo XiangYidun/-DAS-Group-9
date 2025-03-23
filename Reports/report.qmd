@@ -403,6 +403,6 @@ From the confusion matrix, we can see that the accuracy score is 0.8946, indicat
 
 In conclusion, this study analyzed factors influencing whether a movie receives an IMDB rating above 7 using logistic regression. Movie length, budget and the number of votes are key indicators. The model achieved high accuracy (0.8946) and AUC (0.9566) demonstrating a strong classification performance. It effectively identified high-rated movies (0.9282 sensitivity) but showed moderate accuracy for low-rated movies (0.8322 specificity).
 
-# Future Work 
+# Future Work
 
 In this analysis, we found that the ROC curve demonstrated a good model fit. However, the residual plot and QQ plot revealed some issues. During the model diagnostics, we also observed predicted probabilities that were very close to 0 and 1. We suspect that this may be due to the presence of certain categorical predictors with sparse categories, which could be affecting the model's stability. Also residual analysis suggested that possible improvements such as adding interaction term or log-transformation should be taken. These insights can help filmmakers produce movies and better marketing. Furthermore, applying machine learning techniques such as using a Random Forest to handle this binary classification problem may yield better performance and more robust results.
