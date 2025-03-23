@@ -12,7 +12,7 @@ execute:
   eval: true
   warning: false
   message: false
-  results: 'asis'
+  results: asis
 ---
 
 ```{r}
@@ -28,6 +28,9 @@ library(GGally)
 library(gridExtra)
 library(ResourceSelection)
 library(caret)
+library(broom)
+library(knitr)
+library(kableExtra)
 ```
 
 # Introduction
@@ -261,7 +264,10 @@ model <- glm(
 )
 
 # summary of the model
-summary(model)
+tidy_model <- tidy(model)
+
+kable(tidy_model, digits = 3, caption = "Regression Model Coefficients") %>%
+  kable_styling(latex_options = c("hold_position", "striped"))
 ```
 
 It is observed that in some cases the model produces predicted probabilities of exactly 0 or 1. This may be due to variables such as budget or votes having a very large range of values, which affects numerical computations and causes issues like quasi-complete separation in logistic regression.
